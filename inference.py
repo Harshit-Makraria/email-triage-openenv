@@ -306,34 +306,41 @@ async def run_episode(env: EmailTriageEnv, task_id: str, client: OpenAI) -> floa
 # ─────────────────────────────────────────────────────────────
 
 async def main() -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    try:
+        client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
-    all_scores: Dict[str, float] = {}
+        all_scores: Dict[str, float] = {}
 
-    for task_id in TASKS_TO_RUN:
-        # Create env client
-        if IMAGE_NAME:
-            env = await EmailTriageEnv.from_docker_image(IMAGE_NAME, task_id=task_id)
-        else:
-            env = EmailTriageEnv(base_url=ENV_URL, task_id=task_id)
-
-        try:
-            score = await run_episode(env, task_id, client)
-            all_scores[task_id] = score
-        finally:
+        for task_id in TASKS_TO_RUN:
+            # Create env client
             try:
-                await env.close()
+                if IMAGE_NAME:
+                    env = await EmailTriageEnv.from_docker_image(IMAGE_NAME, task_id=task_id)
+                else:
+                    env = EmailTriageEnv(base_url=ENV_URL, task_id=task_id)
             except Exception as exc:
-                print(f"[DEBUG] env.close() error: {exc}", flush=True)
+                print(f"[DEBUG] env creation error for task {task_id}: {exc}", flush=True)
+                continue
 
-    # Summary across all tasks
-    avg = sum(all_scores.values()) / len(all_scores) if all_scores else 0.0
-    print(
-        f"\n[SUMMARY] tasks={len(all_scores)} "
-        + " ".join(f"{k}={v:.3f}" for k, v in all_scores.items())
-        + f" avg={avg:.3f}",
-        flush=True,
-    )
+            try:
+                score = await run_episode(env, task_id, client)
+                all_scores[task_id] = score
+            finally:
+                try:
+                    await env.close()
+                except Exception as exc:
+                    print(f"[DEBUG] env.close() error: {exc}", flush=True)
+
+        # Summary across all tasks
+        avg = sum(all_scores.values()) / len(all_scores) if all_scores else 0.0
+        print(
+            f"\n[SUMMARY] tasks={len(all_scores)} "
+            + " ".join(f"{k}={v:.3f}" for k, v in all_scores.items())
+            + f" avg={avg:.3f}",
+            flush=True,
+        )
+    except Exception as e:
+        print(f"[FATAL] Unhandled exception in main: {e}", flush=True)
 
 
 if __name__ == "__main__":
