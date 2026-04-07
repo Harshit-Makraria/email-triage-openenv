@@ -1,0 +1,134 @@
+name: email-triage
+version: "1.0.0"
+description: >
+  Real-world email triage environment. Agents must classify, prioritize,
+  and respond to a realistic inbox of emails with varying urgency and
+  type. Three tasks span easy→hard difficulty with deterministic graders.
+author: OpenEnv Submission
+license: MIT
+tags:
+  - email
+  - triage
+  - nlp
+  - productivity
+  - real-world
+
+observation_space:
+  type: object
+  description: Current inbox state shown to the agent at each step.
+  properties:
+    task_id:
+      type: string
+      description: Active task identifier.
+    step:
+      type: integer
+      description: Current step number (0-indexed at reset).
+    max_steps:
+      type: integer
+      description: Maximum steps allowed before episode terminates.
+    inbox:
+      type: array
+      description: Full list of emails in the episode inbox.
+      items:
+        type: object
+        properties:
+          id:        { type: string }
+          sender:    { type: string }
+          subject:   { type: string }
+          body:      { type: string }
+          timestamp: { type: string }
+    remaining_email_ids:
+      type: array
+      items: { type: string }
+      description: IDs of emails not yet processed by the agent.
+    processed_count:
+      type: integer
+    total_emails:
+      type: integer
+    current_score:
+      type: number
+      minimum: 0.0
+      maximum: 1.0
+      description: Composite quality score of all actions taken so far.
+    last_feedback:
+      type: string
+      nullable: true
+      description: Human-readable feedback from the previous step's grader.
+    instructions:
+      type: string
+      description: Task-specific natural-language instructions for the agent.
+
+action_space:
+  type: object
+  description: Decisions for one or more emails, submitted as a batch.
+  properties:
+    email_actions:
+      type: array
+      items:
+        type: object
+        required: [email_id, category, priority, action]
+        properties:
+          email_id:
+            type: string
+          category:
+            type: string
+            enum: [spam, work, personal, newsletter, urgent]
+          priority:
+            type: integer
+            minimum: 1
+            maximum: 20
+            description: Urgency rank — 1 is most urgent, must be unique within episode.
+          action:
+            type: string
+            enum: [read, archive, delete, respond, flag]
+          response_draft:
+            type: string
+            nullable: true
+            description: >
+              Required when action=respond. Must be ≥20 words, professional,
+              address the email content, and include greeting + sign-off.
+
+reward:
+  type: number
+  minimum: 0.0
+  maximum: 1.0
+  description: >
+    Per-step improvement in the weighted composite quality score.
+    Reward = max(0, current_score − previous_score).
+    Non-negative; provides a dense signal over the full trajectory.
+    Final episode score is the composite quality at episode end.
+
+tasks:
+  - id: email-classify
+    name: "Email Classification"
+    difficulty: easy
+    max_steps: 5
+    num_emails: 5
+    description: >
+      Classify 5 emails into the correct categories: spam, work, personal,
+      newsletter, or urgent. Score is weighted accuracy
+      (classification 60%, action 20%, priority 20%).
+
+  - id: email-prioritize
+    name: "Email Prioritization"
+    difficulty: medium
+    max_steps: 8
+    num_emails: 8
+    description: >
+      Assign unique urgency ranks 1–8 to 8 emails. Score is dominated by
+      Spearman rank correlation with ground-truth ordering
+      (priority 60%, classification 25%, action 15%).
+
+  - id: email-triage-full
+    name: "Full Email Triage"
+    difficulty: hard
+    max_steps: 12
+    num_emails: 12
+    description: >
+      Complete triage of 12 emails: classify, prioritize, choose actions,
+      and draft professional responses for emails requiring replies.
+      Score is equally weighted across classification, priority, action,
+      and response quality (25% each, adjusted by task weights).
+
+entry_point: "server:app"
+port: 7860
