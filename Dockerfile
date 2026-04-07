@@ -14,7 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # ── Application code ─────────────────────────────────────────
 COPY openenv.yaml .
 COPY email_triage_env.py .
-COPY server.py .
+COPY pyproject.toml .
+COPY server/ ./server/
 COPY tasks/ ./tasks/
 
 # ── Runtime config ───────────────────────────────────────────
@@ -25,4 +26,4 @@ EXPOSE 7860
 HEALTHCHECK --interval=5s --timeout=5s --start-period=15s --retries=10 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/health')"
 
-CMD ["sh", "-c", "uvicorn server:app --host 0.0.0.0 --port ${PORT} --log-level info"]
+CMD ["sh", "-c", "uvicorn server.app:app --host 0.0.0.0 --port ${PORT} --log-level info"]

@@ -26,3 +26,7 @@ dependencies = [
 dev = [
     "pytest"
 ]
+
+[tool.setuptools]
+packages = ["server", "tasks"]
+py-modules = ["email_triage_env"]
