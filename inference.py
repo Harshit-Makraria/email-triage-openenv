@@ -236,11 +236,14 @@ def _fallback_action(observation: Any) -> TriageAction:
 # Single-task episode runner
 # ─────────────────────────────────────────────────────────────
 
-async def run_episode(env: EmailTriageEnv, task_id: str, client: OpenAI) -> float:
+async def run_episode(task_id: str, client: OpenAI) -> float:
     """
     Run one complete episode for *task_id*.
     Emits [START] / [STEP]+ / [END] to stdout.
     Returns the final score ∈ [0, 1].
+
+    Env creation is handled internally so [START] is always printed first
+    and [END] is always printed last, even on connection failures.
     """
     rewards: List[float] = []
     steps_taken = 0
@@ -248,9 +251,16 @@ async def run_episode(env: EmailTriageEnv, task_id: str, client: OpenAI) -> floa
     success = False
     last_error: Optional[str] = None
 
+    # [START] must be the very first output — before any I/O that can fail.
     log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
 
+    env: Optional[EmailTriageEnv] = None
     try:
+        if IMAGE_NAME:
+            env = await EmailTriageEnv.from_docker_image(IMAGE_NAME, task_id=task_id)
+        else:
+            env = EmailTriageEnv(base_url=ENV_URL, task_id=task_id)
+
         result = await env.reset(task_id=task_id)
         obs = result.observation
         last_reward = 0.0
@@ -296,6 +306,12 @@ async def run_episode(env: EmailTriageEnv, task_id: str, client: OpenAI) -> floa
         last_error = str(exc)
         print(f"[DEBUG] Episode error: {exc}", flush=True)
     finally:
+        if env is not None:
+            try:
+                await env.close()
+            except Exception as exc:
+                print(f"[DEBUG] env.close() error: {exc}", flush=True)
+        # [END] is always emitted, even on env-creation or connection failure.
         log_end(task=task_id, success=success, steps=steps_taken, score=score, rewards=rewards)
 
     return score
@@ -312,24 +328,11 @@ async def main() -> None:
         all_scores: Dict[str, float] = {}
 
         for task_id in TASKS_TO_RUN:
-            # Create env client
             try:
-                if IMAGE_NAME:
-                    env = await EmailTriageEnv.from_docker_image(IMAGE_NAME, task_id=task_id)
-                else:
-                    env = EmailTriageEnv(base_url=ENV_URL, task_id=task_id)
-            except Exception as exc:
-                print(f"[DEBUG] env creation error for task {task_id}: {exc}", flush=True)
-                continue
-
-            try:
-                score = await run_episode(env, task_id, client)
+                score = await run_episode(task_id, client)
                 all_scores[task_id] = score
-            finally:
-                try:
-                    await env.close()
-                except Exception as exc:
-                    print(f"[DEBUG] env.close() error: {exc}", flush=True)
+            except Exception as exc:
+                print(f"[DEBUG] Unexpected error for task {task_id}: {exc}", flush=True)
 
         # Summary across all tasks
         avg = sum(all_scores.values()) / len(all_scores) if all_scores else 0.0
