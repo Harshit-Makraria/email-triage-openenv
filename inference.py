@@ -38,13 +38,10 @@ from email_triage_env import EmailTriageEnv, SingleEmailAction, TriageAction
 # Configuration
 # ─────────────────────────────────────────────────────────────
 
-IMAGE_NAME: Optional[str] = os.getenv("IMAGE_NAME")
+IMAGE_NAME: Optional[str] = os.getenv("LOCAL_IMAGE_NAME") or os.getenv("IMAGE_NAME")
 ENV_URL: str = os.getenv("ENV_URL", "http://localhost:7860")
-# Use os.environ[] (not os.getenv with default) so inference fails loudly
-# if the validator's API_BASE_URL / API_KEY are not injected, rather than
-# silently falling back to HuggingFace router with a personal HF_TOKEN.
-API_KEY: str = os.environ["API_KEY"]
-API_BASE_URL: str = os.environ["API_BASE_URL"]
+API_KEY: str = os.getenv("HF_TOKEN") or os.getenv("API_KEY") or "dummy"
+API_BASE_URL: str = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
 MODEL_NAME: str = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 BENCHMARK: str = "email-triage"
 
@@ -79,7 +76,7 @@ def log_step(
 def log_end(task: str, success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(
-        f"[END] task={task} success={str(success).lower()} steps={steps} "
+        f"[END] success={str(success).lower()} steps={steps} "
         f"score={score:.3f} rewards={rewards_str}",
         flush=True,
     )
