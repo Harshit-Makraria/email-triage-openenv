@@ -40,7 +40,7 @@ from email_triage_env import EmailTriageEnv, SingleEmailAction, TriageAction
 
 IMAGE_NAME: Optional[str] = os.getenv("LOCAL_IMAGE_NAME") or os.getenv("IMAGE_NAME")
 ENV_URL: str = os.getenv("ENV_URL", "http://localhost:7860")
-API_KEY: str = os.getenv("HF_TOKEN") or os.getenv("API_KEY") or "dummy"
+API_KEY: str = os.getenv("API_KEY") or os.getenv("HF_TOKEN") or "dummy"
 API_BASE_URL: str = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
 MODEL_NAME: str = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 BENCHMARK: str = "email-triage"
@@ -326,7 +326,10 @@ async def main() -> None:
         print(f"[DEBUG] API_KEY prefix={key_preview}", flush=True)
         print(f"[DEBUG] MODEL_NAME={MODEL_NAME}", flush=True)
 
-        client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+        if "API_BASE_URL" in os.environ and "API_KEY" in os.environ:
+            client = OpenAI(base_url=os.environ["API_BASE_URL"], api_key=os.environ["API_KEY"])
+        else:
+            client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
         all_scores: Dict[str, float] = {}
 
