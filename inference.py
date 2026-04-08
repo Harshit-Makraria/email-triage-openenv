@@ -160,20 +160,16 @@ def _build_user_prompt(
 # ─────────────────────────────────────────────────────────────
 
 def _call_llm(client: OpenAI, user_prompt: str) -> str:
-    try:
-        completion = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS,
-        )
-        return (completion.choices[0].message.content or "").strip()
-    except Exception as exc:
-        print(f"[DEBUG] LLM call failed: {exc}", flush=True)
-        return ""
+    completion = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=TEMPERATURE,
+        max_tokens=MAX_TOKENS,
+    )
+    return (completion.choices[0].message.content or "").strip()
 
 
 def _parse_action(raw: str, observation: Any) -> Optional[TriageAction]:
@@ -274,6 +270,7 @@ async def run_episode(task_id: str, client: OpenAI) -> float:
             action = _parse_action(raw, obs)
 
             if action is None or not action.email_actions:
+                print(f"[DEBUG] JSON parse failed or empty actions at step {step}, raw={raw[:200]}", flush=True)
                 action = _fallback_action(obs)
                 last_error = "parse_error_used_fallback"
             else:
@@ -323,6 +320,12 @@ async def run_episode(task_id: str, client: OpenAI) -> float:
 
 async def main() -> None:
     try:
+        # Startup diagnostics — helps debug proxy injection issues
+        key_preview = API_KEY[:8] + "..." if len(API_KEY) > 8 else API_KEY
+        print(f"[DEBUG] API_BASE_URL={API_BASE_URL}", flush=True)
+        print(f"[DEBUG] API_KEY prefix={key_preview}", flush=True)
+        print(f"[DEBUG] MODEL_NAME={MODEL_NAME}", flush=True)
+
         client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
         all_scores: Dict[str, float] = {}
