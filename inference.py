@@ -23,6 +23,7 @@ Stdout format (one episode = one task)
 
 from __future__ import annotations
 
+import socket
 import asyncio
 import json
 import os
@@ -38,7 +39,7 @@ from email_triage_env import EmailTriageEnv, SingleEmailAction, TriageAction
 # Configuration
 # ─────────────────────────────────────────────────────────────
 
-IMAGE_NAME: Optional[str] = os.environ.get("IMAGE_NAME")
+IMAGE_NAME: Optional[str] = os.environ.get("LOCAL_IMAGE_NAME") or os.environ.get("IMAGE_NAME")
 ENV_URL: str = os.environ.get("ENV_URL", "http://localhost:7860")
 API_KEY: str = os.environ.get("API_KEY") or os.environ.get("HF_TOKEN") or "dummy"
 API_BASE_URL: str = os.environ.get("API_BASE_URL") or "https://router.huggingface.co/v1"
@@ -232,6 +233,11 @@ def _fallback_action(observation: Any) -> TriageAction:
 # Single-task episode runner
 # ─────────────────────────────────────────────────────────────
 
+def _get_free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('', 0))
+        return s.getsockname()[1]
+
 async def run_episode(task_id: str, client: OpenAI) -> float:
     """
     Run one complete episode for *task_id*.
@@ -253,7 +259,10 @@ async def run_episode(task_id: str, client: OpenAI) -> float:
     env: Optional[EmailTriageEnv] = None
     try:
         if IMAGE_NAME:
-            env = await EmailTriageEnv.from_docker_image(IMAGE_NAME, task_id=task_id)
+            random_port = _get_free_port()
+            env = await EmailTriageEnv.from_docker_image(
+                IMAGE_NAME, task_id=task_id, port=random_port
+            )
         else:
             env = EmailTriageEnv(base_url=ENV_URL, task_id=task_id)
 
