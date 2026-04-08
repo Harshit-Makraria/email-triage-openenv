@@ -40,7 +40,7 @@ from email_triage_env import EmailTriageEnv, SingleEmailAction, TriageAction
 
 IMAGE_NAME: Optional[str] = os.getenv("IMAGE_NAME")
 ENV_URL: str = os.getenv("ENV_URL", "http://localhost:7860")
-API_KEY: str = os.getenv("HF_TOKEN") or os.getenv("API_KEY") or "no-key"
+API_KEY: str = os.getenv("API_KEY") or os.getenv("HF_TOKEN") or "no-key"
 API_BASE_URL: str = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME: str = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 BENCHMARK: str = "email-triage"
