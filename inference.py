@@ -8,9 +8,9 @@ OpenEnv evaluation harness.
 
 Environment variables
 ---------------------
-API_BASE_URL        LLM API endpoint  (default: https://router.huggingface.co/v1)
+API_BASE_URL        LLM API endpoint
 MODEL_NAME          Model identifier  (default: Qwen/Qwen2.5-72B-Instruct)
-HF_TOKEN / API_KEY  API key for the LLM provider
+API_KEY             API key for the LLM provider
 IMAGE_NAME          Docker image name (use from_docker_image when set)
 ENV_URL             Direct URL to a running env server (default: http://localhost:7860)
 
@@ -41,8 +41,8 @@ from email_triage_env import EmailTriageEnv, SingleEmailAction, TriageAction
 
 IMAGE_NAME: Optional[str] = os.environ.get("LOCAL_IMAGE_NAME") or os.environ.get("IMAGE_NAME")
 ENV_URL: str = os.environ.get("ENV_URL", "http://localhost:7860")
-API_KEY: str = os.environ.get("API_KEY") or os.environ.get("HF_TOKEN") or "dummy"
-API_BASE_URL: str = os.environ.get("API_BASE_URL") or "https://router.huggingface.co/v1"
+API_KEY: str = os.environ.get("API_KEY", "")
+API_BASE_URL: str = os.environ.get("API_BASE_URL", "")
 MODEL_NAME: str = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 BENCHMARK: str = "email-triage"
 
