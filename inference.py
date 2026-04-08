@@ -73,10 +73,10 @@ def log_step(
     )
 
 
-def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
+def log_end(task: str, success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(
-        f"[END] success={str(success).lower()} steps={steps} "
+        f"[END] task={task} success={str(success).lower()} steps={steps} "
         f"score={score:.3f} rewards={rewards_str}",
         flush=True,
     )
@@ -296,7 +296,7 @@ async def run_episode(env: EmailTriageEnv, task_id: str, client: OpenAI) -> floa
         last_error = str(exc)
         print(f"[DEBUG] Episode error: {exc}", flush=True)
     finally:
-        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+        log_end(task=task_id, success=success, steps=steps_taken, score=score, rewards=rewards)
 
     return score
 
