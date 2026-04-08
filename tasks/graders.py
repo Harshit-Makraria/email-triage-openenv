@@ -229,7 +229,7 @@ def grade_task(
         components["response"] = 0.0
 
     total = sum(components.get(k, 0.0) * v for k, v in weights.items())
-    total = round(max(0.0, min(1.0, total)), 4)
+    total = round(max(0.001, min(0.999, total)), 4)
 
     return {
         "total_score": total,
