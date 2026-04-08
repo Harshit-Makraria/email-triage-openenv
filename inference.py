@@ -40,8 +40,11 @@ from email_triage_env import EmailTriageEnv, SingleEmailAction, TriageAction
 
 IMAGE_NAME: Optional[str] = os.getenv("IMAGE_NAME")
 ENV_URL: str = os.getenv("ENV_URL", "http://localhost:7860")
-API_KEY: str = os.getenv("API_KEY") or os.getenv("HF_TOKEN") or "no-key"
-API_BASE_URL: str = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+# Use os.environ[] (not os.getenv with default) so inference fails loudly
+# if the validator's API_BASE_URL / API_KEY are not injected, rather than
+# silently falling back to HuggingFace router with a personal HF_TOKEN.
+API_KEY: str = os.environ["API_KEY"]
+API_BASE_URL: str = os.environ["API_BASE_URL"]
 MODEL_NAME: str = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 BENCHMARK: str = "email-triage"
 
